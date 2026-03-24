@@ -1,0 +1,664 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simo Archive</title>
+    <style>
+        :root {
+            --primary: #4A90E2;
+            --secondary: #2ECC71;
+            --tab-btn: #9B59B6;
+            --item-btn: #E67E22;
+            --bg: #F5F7FA;
+            --card-bg: #FFFFFF;
+            --text: #333333;
+            --border: #ddd;
+        }
+        body.dark-mode {
+            --primary: #5DADE2;
+            --secondary: #27AE60;
+            --tab-btn: #8E44AD;
+            --item-btn: #D35400;
+            --bg: #1A1A24;
+            --card-bg: #2C2C38;
+            --text: #F5F7FA;
+            --border: #444;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            margin: 0;
+            padding: 20px;
+            transition: background 0.3s, color 0.3s;
+            min-height: 100vh;
+        }
+        
+        header {
+            display: flex; justify-content: space-between; align-items: center;
+            margin-bottom: 20px; flex-wrap: wrap; gap: 15px;
+            background: rgba(var(--card-bg), 0.8); backdrop-filter: blur(10px);
+            padding: 15px; border-radius: 10px; border: 1px solid var(--border);
+        }
+        
+        .header-actions { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+        .search-container { flex-grow: 1; max-width: 300px; }
+        .search-container input {
+            width: 100%; padding: 10px; border: 1px solid var(--border);
+            border-radius: 5px; font-size: 14px; background: var(--card-bg); color: var(--text);
+        }
+
+        button {
+            color: white; border: none; padding: 10px 15px;
+            border-radius: 5px; cursor: pointer; font-weight: bold;
+            display: flex; align-items: center; gap: 5px;
+        }
+        button:hover { opacity: 0.85; transform: translateY(-1px); }
+        .btn-tab { background-color: var(--tab-btn); }
+        .btn-item { background-color: var(--item-btn); }
+        .success { background-color: var(--secondary); }
+        .theme-btn { background-color: #555; }
+        .btn-small { padding: 5px 10px; font-size: 12px; }
+        .danger { background-color: #E74C3C; }
+        .edit-btn { background-color: #F39C12; }
+        .view-btn { background-color: #3498DB; }
+        .help-btn { background-color: var(--primary); border-radius: 50%; width: 40px; height: 40px; justify-content: center; font-size: 18px; padding: 0; }
+        
+        /* Tabs */
+        .tabs-container {
+            display: flex; gap: 10px; border-bottom: 2px solid var(--border);
+            padding-bottom: 10px; margin-bottom: 20px; overflow-x: auto;
+            background: rgba(var(--card-bg), 0.8); backdrop-filter: blur(5px);
+            padding: 10px; border-radius: 10px;
+        }
+        .tab {
+            padding: 10px 20px; background-color: var(--card-bg); color: var(--text);
+            border-radius: 5px; cursor: grab; display: flex; align-items: center;
+            gap: 10px; white-space: nowrap; border: 1px solid var(--border);
+        }
+        .tab:active { cursor: grabbing; }
+        .tab.active { background-color: var(--primary); color: white; border-color: var(--primary); }
+        .icon-btn { font-size: 14px; background: none; color: inherit; padding: 0; margin: 0; cursor: pointer; opacity: 0.7; }
+        .icon-btn:hover { opacity: 1; transform: scale(1.1); }
+
+        /* Items Grid */
+        .items-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px; }
+        .card {
+            background-color: var(--card-bg); padding: 15px; border-radius: 8px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1); display: flex; flex-direction: column; gap: 10px;
+            border: 1px solid var(--border); cursor: grab;
+        }
+        .card:active { cursor: grabbing; opacity: 0.8; }
+        .card img { width: 100%; height: 160px; object-fit: cover; border-radius: 4px; background-color: #eee; }
+        .card a { color: var(--primary); text-decoration: none; font-weight: bold; word-break: break-all; font-size: 18px; }
+        .card a:hover { text-decoration: underline; }
+        .card .notes { font-size: 13px; color: var(--text); opacity: 0.8; white-space: pre-wrap; background: var(--bg); padding: 8px; border-radius: 4px; border: 1px solid var(--border); max-height: 100px; overflow-y: auto; }
+        
+        .card-actions { display: flex; gap: 5px; margin-top: auto; }
+        .card-actions button { flex: 1; justify-content: center; }
+        
+        /* Tags */
+        .tags { display: flex; flex-wrap: wrap; gap: 5px; }
+        .tag { background-color: var(--primary); color: white; padding: 4px 8px; border-radius: 12px; font-size: 11px; font-weight: bold; cursor: pointer; }
+        .tag:hover { opacity: 0.8; transform: scale(1.05); }
+        
+        /* Modals */
+        dialog {
+            border: 1px solid var(--border); border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+            padding: 20px; width: 350px; background-color: var(--card-bg); color: var(--text);
+        }
+        dialog::backdrop { background: rgba(0,0,0,0.7); backdrop-filter: blur(3px); }
+        .form-group { margin-bottom: 15px; display: flex; flex-direction: column; gap: 5px; }
+        .form-group input, .form-group textarea, .form-group select {
+            padding: 8px; border: 1px solid var(--border); border-radius: 4px;
+            background: var(--bg); color: var(--text); font-family: inherit;
+        }
+        .dialog-buttons { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
+        
+        /* Help Modal Specifics */
+        #helpModal { width: 500px; max-width: 90vw; }
+        .help-content { max-height: 60vh; overflow-y: auto; line-height: 1.6; font-size: 14px; padding-right: 10px; }
+        .help-content h4 { color: var(--primary); margin-bottom: 5px; margin-top: 20px; }
+        .help-content ul { padding-left: 20px; margin-top: 5px; }
+
+        /* Media Viewer Dialog */
+        #mediaViewer { width: 80%; max-width: 1000px; padding: 10px; background: #000; text-align: center; }
+        #mediaContent { width: 100%; height: 70vh; display: flex; justify-content: center; align-items: center; }
+        #mediaContent img, #mediaContent video { max-width: 100%; max-height: 100%; object-fit: contain; }
+        #mediaContent iframe { width: 100%; height: 100%; border: none; }
+        .close-viewer { position: absolute; top: 10px; right: 10px; background: red; z-index: 10; }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>Simo's Archive</h1>
+        <div class="search-container">
+            <input type="text" id="searchInput" placeholder="Search everywhere (name, tags, notes)..." onkeyup="render()">
+        </div>
+        <div class="header-actions">
+            <button class="help-btn" onclick="document.getElementById('helpModal').showModal()" title="Help & Info">❓</button>
+            <button class="theme-btn" onclick="toggleTheme()">🌓 Theme</button>
+            
+            <button class="theme-btn" onclick="downloadCSVTemplate()">⬇️ CSV Template</button>
+            <button class="success" onclick="triggerImport('importJSON')">Import JSON</button>
+            <button class="success" onclick="triggerImport('importCSV')">Import CSV</button>
+            <button class="success" onclick="exportData()">Export Backup</button>
+            
+            <input type="file" id="importJSON" accept=".json" style="display: none;" onchange="importJSONData(event)">
+            <input type="file" id="importCSV" accept=".csv" style="display: none;" onchange="importCSVData(event)">
+            
+            <button class="btn-tab" onclick="openTabModal()">+ New Tab</button>
+            <button class="btn-item" onclick="openItemModal()">+ Add Item</button>
+        </div>
+    </header>
+
+    <div class="tabs-container" id="tabsContainer"></div>
+    <div class="items-grid" id="itemsContainer"></div>
+
+    <dialog id="helpModal">
+        <h3>📖 How to Use Your Archive</h3>
+        <div class="help-content">
+            <p>Welcome to your personal archive! Here is a quick guide on how to get the most out of it:</p>
+            
+            <h4>🗂️ Organizing Tabs & Items</h4>
+            <ul>
+                <li><strong>Drag and Drop:</strong> Click and hold any Tab or Item Card to drag it. You can reorder tabs, or change the order of items within a tab.</li>
+                <li><strong>Tab Backgrounds:</strong> Click the small ⚙️ gear icon on any tab to change its name, give it a solid background color, or paste an image URL to customize your workspace.</li>
+            </ul>
+
+            <h4>🎬 Adding Multimedia & Previews</h4>
+            <ul>
+                <li><strong>Auto-Previews:</strong> If you paste a YouTube link or a direct image link into the URL box, the system will automatically fetch the thumbnail/image for you. No need to fill out the "Override Image" box!</li>
+                <li><strong>Media Viewer:</strong> If an item is a YouTube video, local video (mp4), audio file (mp3), or image, a "▶️ View" button will appear. Click it to view or play the file in a popup overlay without leaving the page.</li>
+                <li><strong>Local Files:</strong> You can paste paths directly from your PC like <code>"C:\Users\Photo.jpg"</code>. The system will automatically fix the formatting and remove the quotes for you.</li>
+            </ul>
+
+            <h4>🔍 Searching & Tags</h4>
+            <ul>
+                <li><strong>Global Search:</strong> Typing in the top search bar searches <em>everything</em> across all tabs simultaneously.</li>
+                <li><strong>Clickable Tags:</strong> Add comma-separated tags when creating an item. If you click a tag pill on a card, it instantly filters your entire archive for that specific tag.</li>
+            </ul>
+
+            <h4>⚠️ Important: Saving Your Data!</h4>
+            <ul>
+                <li>This archive runs on <strong>Local Storage</strong>. Your data is saved locally inside this specific web browser.</li>
+                <li>If you clear your browser's Cache/Site Data, or open this file in a different browser, <strong>your data will not be there.</strong></li>
+                <li><strong>Best Practice:</strong> Use the green <strong>Export Backup</strong> button regularly. This saves a physical file to your PC. If you ever lose your data, just click <strong>Import JSON</strong> to restore everything instantly!</li>
+            </ul>
+        </div>
+        <div class="dialog-buttons">
+            <button class="danger" onclick="document.getElementById('helpModal').close()">Close Guide</button>
+        </div>
+    </dialog>
+
+    <dialog id="tabModal">
+        <h3 id="tabModalTitle">Add New Tab</h3>
+        <div class="form-group">
+            <label>Tab Name</label>
+            <input type="text" id="tabNameInput">
+        </div>
+        <div class="form-group">
+            <label>Background Type</label>
+            <select id="tabBgType" onchange="toggleBgInputs()">
+                <option value="none">Default Background</option>
+                <option value="color">Solid Color</option>
+                <option value="image">Image URL / Local File</option>
+            </select>
+        </div>
+        <div class="form-group" id="bgColorGroup" style="display:none;">
+            <label>Pick Color</label>
+            <input type="color" id="tabBgColor" value="#333333">
+        </div>
+        <div class="form-group" id="bgImageGroup" style="display:none;">
+            <label>Background Image Path</label>
+            <input type="text" id="tabBgImage" placeholder='Paste link or "C:\Path..."'>
+        </div>
+        <div class="dialog-buttons">
+            <button class="danger" onclick="document.getElementById('tabModal').close()">Cancel</button>
+            <button class="btn-tab" onclick="saveTab()">Save Tab</button>
+        </div>
+    </dialog>
+
+    <dialog id="itemModal">
+        <h3 id="itemModalTitle">Add New Item</h3>
+        <div class="form-group">
+            <label>Name</label>
+            <input type="text" id="itemName" placeholder="e.g., Quick Reference Guide">
+        </div>
+        <div class="form-group">
+            <label>Link / Local File Path</label>
+            <input type="text" id="itemUrl" placeholder='Paste link or "C:\Path..."'>
+        </div>
+        <div class="form-group">
+            <label>Notes / Code Snippet</label>
+            <textarea id="itemNotes" rows="3" placeholder="Jot down notes or paste code..."></textarea>
+        </div>
+        <div class="form-group">
+            <label>Tags (comma separated)</label>
+            <input type="text" id="itemTags" placeholder="tutorial, ui, guide">
+        </div>
+        <div class="form-group">
+            <label>Override Image URL (Optional)</label>
+            <input type="text" id="itemImage" placeholder="Leave blank to auto-fetch video thumbnail">
+        </div>
+        <div class="dialog-buttons">
+            <button class="danger" onclick="document.getElementById('itemModal').close()">Cancel</button>
+            <button class="btn-item" onclick="saveItem()">Save Item</button>
+        </div>
+    </dialog>
+
+    <dialog id="mediaViewer">
+        <button class="close-viewer danger" onclick="document.getElementById('mediaViewer').close(); document.getElementById('mediaContent').innerHTML='';">✖ Close</button>
+        <div id="mediaContent"></div>
+    </dialog>
+
+    <script>
+        // State
+        let archiveData = JSON.parse(localStorage.getItem('myArchiveData')) || [];
+        let activeTabIndex = 0;
+        
+        let editingTabIndex = null;
+        let editingItemInfo = null;
+        
+        let draggedType = null;
+        let draggedIndex = null;
+        let draggedOriginalTabIndex = null;
+
+        // Init Theme
+        if (localStorage.getItem('darkMode') === 'true') document.body.classList.add('dark-mode');
+        function toggleTheme() {
+            document.body.classList.toggle('dark-mode');
+            localStorage.setItem('darkMode', document.body.classList.contains('dark-mode'));
+            applyTabBackground();
+        }
+
+        function saveData() {
+            localStorage.setItem('myArchiveData', JSON.stringify(archiveData));
+            render();
+        }
+
+        function cleanString(str) { return str ? str.trim().replace(/^"|"$/g, '').replace(/^'|'$/g, '') : ''; }
+        function triggerImport(id) { document.getElementById(id).click(); }
+
+        /* --- Export & Import Functions --- */
+        function exportData() {
+            if (archiveData.length === 0) return alert("Nothing to export!");
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(new Blob([JSON.stringify(archiveData, null, 2)], { type: "application/json" }));
+            a.download = "archive_backup.json";
+            a.click();
+        }
+
+        function importJSONData(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    let data = JSON.parse(e.target.result);
+                    if (Array.isArray(data)) { archiveData = data; saveData(); alert("Backup imported!"); }
+                } catch (err) { alert("Invalid JSON file."); }
+            };
+            reader.readAsText(file);
+            event.target.value = '';
+        }
+
+        function downloadCSVTemplate() {
+            const csvContent = 
+                "Tab,Name,URL,Image,Notes,Tags\n" +
+                "Recipes,Chocolate Chip Cookies,https://example.com/cookies,,Secret family recipe,baking; dessert\n" +
+                "Workouts,10 Min Core Routine,https://example.com/core,,Do this every morning,fitness; health\n" +
+                "Gardening,How to grow Tomatoes,https://example.com/tomatoes,,Best soil types for summer,plants; outdoor";
+
+            const blob = new Blob([csvContent], { type: 'text/csv' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = "archive_import_template.csv";
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        function importCSVData(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const lines = e.target.result.split('\n');
+                let count = 0;
+                for (let i = 1; i < lines.length; i++) {
+                    const line = lines[i].trim();
+                    if (!line) continue;
+                    const parts = line.split(','); 
+                    if (parts.length >= 3) {
+                        const tabName = cleanString(parts[0]);
+                        let tabObj = archiveData.find(t => t.name.toLowerCase() === tabName.toLowerCase());
+                        if (!tabObj) {
+                            tabObj = { name: tabName, bgType: 'none', bgVal: '', items: [] };
+                            archiveData.push(tabObj);
+                        }
+                        tabObj.items.push({
+                            name: cleanString(parts[1]), url: cleanString(parts[2]),
+                            image: cleanString(parts[3]), notes: cleanString(parts[4]),
+                            tags: cleanString(parts[5]).split(';').map(t=>t.trim()).filter(t=>t)
+                        });
+                        count++;
+                    }
+                }
+                saveData(); alert(`Imported ${count} items!`);
+            };
+            reader.readAsText(file); event.target.value = '';
+        }
+
+        /* --- Tab Functions --- */
+        function openTabModal(editIndex = null) {
+            editingTabIndex = editIndex;
+            document.getElementById('tabModalTitle').innerText = editIndex === null ? 'Add New Tab' : 'Edit Tab Settings';
+            
+            if (editIndex !== null) {
+                const tab = archiveData[editIndex];
+                document.getElementById('tabNameInput').value = tab.name;
+                document.getElementById('tabBgType').value = tab.bgType || 'none';
+                if(tab.bgType === 'color') document.getElementById('tabBgColor').value = tab.bgVal || '#333333';
+                if(tab.bgType === 'image') document.getElementById('tabBgImage').value = tab.bgVal || '';
+            } else {
+                document.getElementById('tabNameInput').value = '';
+                document.getElementById('tabBgType').value = 'none';
+                document.getElementById('tabBgImage').value = '';
+            }
+            toggleBgInputs();
+            document.getElementById('tabModal').showModal();
+        }
+
+        function toggleBgInputs() {
+            const type = document.getElementById('tabBgType').value;
+            document.getElementById('bgColorGroup').style.display = (type === 'color') ? 'flex' : 'none';
+            document.getElementById('bgImageGroup').style.display = (type === 'image') ? 'flex' : 'none';
+        }
+
+        function saveTab() {
+            const name = document.getElementById('tabNameInput').value.trim();
+            if (!name) return;
+            
+            const bgType = document.getElementById('tabBgType').value;
+            let bgVal = '';
+            if (bgType === 'color') bgVal = document.getElementById('tabBgColor').value;
+            if (bgType === 'image') bgVal = cleanString(document.getElementById('tabBgImage').value);
+
+            if (editingTabIndex !== null) {
+                archiveData[editingTabIndex].name = name;
+                archiveData[editingTabIndex].bgType = bgType;
+                archiveData[editingTabIndex].bgVal = bgVal;
+            } else {
+                archiveData.push({ name, bgType, bgVal, items: [] });
+                activeTabIndex = archiveData.length - 1;
+            }
+            document.getElementById('tabModal').close();
+            saveData();
+        }
+
+        function deleteTab(index) {
+            if (confirm('Delete this tab and all its items?')) {
+                archiveData.splice(index, 1);
+                activeTabIndex = 0; document.getElementById('searchInput').value = '';
+                saveData();
+            }
+        }
+
+        /* --- Item Functions --- */
+        function openItemModal(tabIndex = null, itemIndex = null) {
+            if (archiveData.length === 0) return alert('Create a tab first!');
+            editingItemInfo = (itemIndex !== null) ? { tabIndex, itemIndex } : null;
+            document.getElementById('itemModalTitle').innerText = editingItemInfo ? 'Edit Item' : 'Add New Item';
+
+            if (editingItemInfo) {
+                const item = archiveData[tabIndex].items[itemIndex];
+                document.getElementById('itemName').value = item.name;
+                document.getElementById('itemUrl').value = item.url;
+                document.getElementById('itemNotes').value = item.notes || '';
+                document.getElementById('itemTags').value = (item.tags || []).join(', ');
+                document.getElementById('itemImage').value = item.image || '';
+            } else {
+                document.getElementById('itemName').value = '';
+                document.getElementById('itemUrl').value = '';
+                document.getElementById('itemNotes').value = '';
+                document.getElementById('itemTags').value = '';
+                document.getElementById('itemImage').value = '';
+            }
+            document.getElementById('itemModal').showModal();
+        }
+
+        function saveItem() {
+            const name = cleanString(document.getElementById('itemName').value);
+            const url = cleanString(document.getElementById('itemUrl').value);
+            if (!name || !url) return;
+
+            const newItem = {
+                name, url,
+                notes: document.getElementById('itemNotes').value.trim(),
+                tags: document.getElementById('itemTags').value.split(',').map(t=>t.trim()).filter(t=>t),
+                image: cleanString(document.getElementById('itemImage').value)
+            };
+
+            if (editingItemInfo) {
+                archiveData[editingItemInfo.tabIndex].items[editingItemInfo.itemIndex] = newItem;
+            } else {
+                archiveData[activeTabIndex].items.push(newItem);
+            }
+            document.getElementById('itemModal').close();
+            saveData();
+        }
+
+        function deleteItem(tabIndex, itemIndex) {
+            if(confirm("Delete this item?")) {
+                archiveData[tabIndex].items.splice(itemIndex, 1);
+                saveData();
+            }
+        }
+
+        /* --- Preview & Multimedia Handlers --- */
+        function getYoutubeId(url) {
+            const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
+            const match = url.match(regExp);
+            return (match && match[2].length === 11) ? match[2] : null;
+        }
+
+        function isImageLink(url) { return /\.(jpeg|jpg|gif|png|webp|bmp)(\?.*)?$/i.test(url); }
+        function isVideoLink(url) { return /\.(mp4|webm|ogg)(\?.*)?$/i.test(url); }
+        function isAudioLink(url) { return /\.(mp3|wav|ogg)(\?.*)?$/i.test(url); }
+
+        function openViewer(tabIndex, itemIndex) {
+            const item = archiveData[tabIndex].items[itemIndex];
+            const content = document.getElementById('mediaContent');
+            const ytId = getYoutubeId(item.url);
+            
+            let finalUrl = item.url;
+            if (finalUrl.match(/^[a-zA-Z]:\\/)) finalUrl = 'file:///' + finalUrl.replace(/\\/g, '/');
+
+            if (ytId) {
+                content.innerHTML = `<iframe src="https://www.youtube.com/embed/${ytId}?autoplay=1" allow="autoplay; fullscreen"></iframe>`;
+            } else if (isVideoLink(item.url)) {
+                content.innerHTML = `<video controls autoplay src="${finalUrl}"></video>`;
+            } else if (isAudioLink(item.url)) {
+                content.innerHTML = `<audio controls autoplay src="${finalUrl}"></audio>`;
+            } else if (isImageLink(item.url)) {
+                content.innerHTML = `<img src="${finalUrl}">`;
+            } else {
+                alert("Cannot preview this file type directly. Please click the link to open it.");
+                return;
+            }
+            document.getElementById('mediaViewer').showModal();
+        }
+
+        function searchTag(tag) {
+            document.getElementById('searchInput').value = tag;
+            render();
+        }
+
+        /* --- Drag and Drop --- */
+        function handleDragStart(e, type, index, tabIndex = null) {
+            draggedType = type;
+            draggedIndex = index;
+            draggedOriginalTabIndex = tabIndex;
+            e.target.style.opacity = '0.5';
+        }
+        function handleDragOver(e) { e.preventDefault(); }
+        function handleDrop(e, dropType, targetIndex) {
+            e.preventDefault();
+            e.target.style.opacity = '1';
+            
+            if (draggedType === 'tab' && dropType === 'tab' && draggedIndex !== targetIndex) {
+                const movedTab = archiveData.splice(draggedIndex, 1)[0];
+                archiveData.splice(targetIndex, 0, movedTab);
+                if(activeTabIndex === draggedIndex) activeTabIndex = targetIndex;
+                else if(activeTabIndex === targetIndex) activeTabIndex = draggedIndex;
+                saveData();
+            }
+            else if (draggedType === 'item' && dropType === 'item' && document.getElementById('searchInput').value.trim() === '') {
+                if (draggedOriginalTabIndex === activeTabIndex && draggedIndex !== targetIndex) {
+                    const items = archiveData[activeTabIndex].items;
+                    const movedItem = items.splice(draggedIndex, 1)[0];
+                    items.splice(targetIndex, 0, movedItem);
+                    saveData();
+                }
+            }
+            draggedType = null;
+        }
+
+        /* --- Render --- */
+        function applyTabBackground() {
+            if (!archiveData[activeTabIndex]) {
+                document.body.style.background = 'var(--bg)';
+                return;
+            }
+            const tab = archiveData[activeTabIndex];
+            if (tab.bgType === 'color' && tab.bgVal) {
+                document.body.style.background = tab.bgVal;
+            } else if (tab.bgType === 'image' && tab.bgVal) {
+                let finalBg = tab.bgVal;
+                if (finalBg.match(/^[a-zA-Z]:\\/)) finalBg = 'file:///' + finalBg.replace(/\\/g, '/');
+                
+                document.body.style.background = `url('${finalBg}')`;
+                document.body.style.backgroundSize = 'cover';
+                document.body.style.backgroundPosition = 'center';
+                document.body.style.backgroundAttachment = 'fixed';
+            } else {
+                document.body.style.background = 'var(--bg)';
+            }
+        }
+
+        function render() {
+            const tabsContainer = document.getElementById('tabsContainer');
+            const itemsContainer = document.getElementById('itemsContainer');
+            const searchQuery = document.getElementById('searchInput').value.toLowerCase().trim();
+            const isSearching = searchQuery !== '';
+            
+            tabsContainer.innerHTML = ''; itemsContainer.innerHTML = '';
+            if (archiveData.length === 0) return itemsContainer.innerHTML = '<p>No tabs yet. Click + New Tab!</p>';
+
+            applyTabBackground();
+
+            // Render Tabs
+            archiveData.forEach((tab, index) => {
+                const tabEl = document.createElement('div');
+                tabEl.className = `tab ${index === activeTabIndex && !isSearching ? 'active' : ''}`;
+                tabEl.draggable = true;
+                tabEl.ondragstart = (e) => handleDragStart(e, 'tab', index);
+                tabEl.ondragover = handleDragOver;
+                tabEl.ondrop = (e) => handleDrop(e, 'tab', index);
+                tabEl.ondragend = (e) => e.target.style.opacity = '1';
+
+                tabEl.innerHTML = `
+                    <span onclick="switchTab(${index})">${tab.name}</span>
+                    <button class="icon-btn" onclick="openTabModal(${index})">⚙️</button>
+                    <button class="icon-btn danger" onclick="deleteTab(${index})" style="color:red; opacity:1;">✖</button>
+                `;
+                tabsContainer.appendChild(tabEl);
+            });
+
+            // Gather Items to Render
+            let itemsToRender = [];
+            if (isSearching) {
+                archiveData.forEach((tab, tIndex) => {
+                    tab.items.forEach((item, iIndex) => {
+                        const inName = item.name.toLowerCase().includes(searchQuery);
+                        const inNotes = (item.notes || '').toLowerCase().includes(searchQuery);
+                        const inTags = (item.tags || []).some(tag => tag.toLowerCase().includes(searchQuery));
+                        if (inName || inNotes || inTags) {
+                            itemsToRender.push({ item, tIndex, iIndex, tabName: tab.name });
+                        }
+                    });
+                });
+            } else {
+                itemsToRender = (archiveData[activeTabIndex].items || []).map((item, iIndex) => 
+                    ({ item, tIndex: activeTabIndex, iIndex, tabName: null })
+                );
+            }
+
+            if (itemsToRender.length === 0) {
+                itemsContainer.innerHTML = isSearching ? '<p>No matches found.</p>' : '<p>No items here yet.</p>';
+                return;
+            }
+
+            // Draw Cards
+            itemsToRender.forEach((data, renderIndex) => {
+                const card = document.createElement('div');
+                card.className = 'card';
+                if (!isSearching) {
+                    card.draggable = true;
+                    card.ondragstart = (e) => handleDragStart(e, 'item', data.iIndex, data.tIndex);
+                    card.ondragover = handleDragOver;
+                    card.ondrop = (e) => handleDrop(e, 'item', data.iIndex);
+                    card.ondragend = (e) => e.target.style.opacity = '1';
+                }
+
+                const item = data.item;
+                const ytId = getYoutubeId(item.url);
+                
+                let imgSrc = item.image; 
+                if (!imgSrc) {
+                    if (ytId) imgSrc = `https://img.youtube.com/vi/${ytId}/hqdefault.jpg`;
+                    else if (isImageLink(item.url)) imgSrc = item.url.match(/^[a-zA-Z]:\\/) ? 'file:///' + item.url.replace(/\\/g, '/') : item.url;
+                }
+                const imgHtml = imgSrc ? `<img src="${imgSrc}" onerror="this.style.display='none'">` : '';
+
+                let finalUrl = item.url.match(/^[a-zA-Z]:\\/) ? 'file:///' + item.url.replace(/\\/g, '/') : item.url;
+                
+                const canView = ytId || isImageLink(item.url) || isVideoLink(item.url) || isAudioLink(item.url);
+                const viewBtn = canView ? `<button class="btn-small view-btn" onclick="openViewer(${data.tIndex}, ${data.iIndex})">▶️ View</button>` : '';
+
+                const tagsHtml = item.tags && item.tags.length ? `<div class="tags">${item.tags.map(t => `<span class="tag" onclick="searchTag('${t}')">${t}</span>`).join('')}</div>` : '';
+                const notesHtml = item.notes ? `<div class="notes">${item.notes}</div>` : '';
+                const badge = data.tabName ? `<small style="color:var(--primary)">From: ${data.tabName}</small>` : '';
+
+                card.innerHTML = `
+                    ${imgHtml}
+                    <a href="${finalUrl}" target="_blank">${item.name}</a>
+                    ${badge}
+                    ${tagsHtml}
+                    ${notesHtml}
+                    <div class="card-actions">
+                        ${viewBtn}
+                        <button class="btn-small edit-btn" onclick="openItemModal(${data.tIndex}, ${data.iIndex})">✏️ Edit</button>
+                        <button class="btn-small danger" onclick="deleteItem(${data.tIndex}, ${data.iIndex})">🗑️</button>
+                    </div>
+                `;
+                itemsContainer.appendChild(card);
+            });
+        }
+
+        function switchTab(index) {
+            activeTabIndex = index;
+            document.getElementById('searchInput').value = ''; 
+            render();
+        }
+
+        render();
+    </script>
+</body>
+</html>
