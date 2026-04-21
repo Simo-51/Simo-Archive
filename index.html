@@ -3,36 +3,26 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Simo Archive</title>
+    <title>My Personal Archive</title>
+    <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore-compat.js"></script>
+    
     <style>
         :root {
-            --primary: #4A90E2;
-            --secondary: #2ECC71;
-            --tab-btn: #9B59B6;
-            --item-btn: #E67E22;
-            --bg: #F5F7FA;
-            --card-bg: #FFFFFF;
-            --text: #333333;
-            --border: #ddd;
+            --primary: #4A90E2; --secondary: #2ECC71; --tab-btn: #9B59B6;
+            --item-btn: #E67E22; --note-btn: #16A085; --bg: #F5F7FA; 
+            --card-bg: #FFFFFF; --text: #333333; --border: #ddd;
         }
         body.dark-mode {
-            --primary: #5DADE2;
-            --secondary: #27AE60;
-            --tab-btn: #8E44AD;
-            --item-btn: #D35400;
-            --bg: #1A1A24;
-            --card-bg: #2C2C38;
-            --text: #F5F7FA;
-            --border: #444;
+            --primary: #5DADE2; --secondary: #27AE60; --tab-btn: #8E44AD;
+            --item-btn: #D35400; --note-btn: #1ABC9C; --bg: #1A1A24; 
+            --card-bg: #2C2C38; --text: #F5F7FA; --border: #444;
         }
 
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: var(--bg);
-            color: var(--text);
-            margin: 0;
-            padding: 20px;
-            transition: background 0.3s, color 0.3s;
+            background-color: var(--bg); color: var(--text);
+            margin: 0; padding: 20px; transition: background 0.3s, color 0.3s;
             min-height: 100vh;
         }
         
@@ -53,19 +43,28 @@
         button {
             color: white; border: none; padding: 10px 15px;
             border-radius: 5px; cursor: pointer; font-weight: bold;
-            display: flex; align-items: center; gap: 5px;
+            display: flex; align-items: center; justify-content: center; gap: 5px;
         }
         button:hover { opacity: 0.85; transform: translateY(-1px); }
         .btn-tab { background-color: var(--tab-btn); }
         .btn-item { background-color: var(--item-btn); }
+        .btn-note { background-color: var(--note-btn); }
         .success { background-color: var(--secondary); }
         .theme-btn { background-color: #555; }
         .btn-small { padding: 5px 10px; font-size: 12px; }
         .danger { background-color: #E74C3C; }
         .edit-btn { background-color: #F39C12; }
         .view-btn { background-color: #3498DB; }
-        .help-btn { background-color: var(--primary); border-radius: 50%; width: 40px; height: 40px; justify-content: center; font-size: 18px; padding: 0; }
+        .help-btn { background-color: var(--primary); border-radius: 50%; width: 40px; height: 40px; font-size: 18px; padding: 0; }
+        .cloud-btn { background-color: #34495E; }
+        .cloud-active { background-color: #27AE60 !important; animation: pulse 2s infinite; }
         
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(39, 174, 96, 0.7); }
+            70% { box-shadow: 0 0 0 10px rgba(39, 174, 96, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(39, 174, 96, 0); }
+        }
+
         /* Tabs */
         .tabs-container {
             display: flex; gap: 10px; border-bottom: 2px solid var(--border);
@@ -92,9 +91,20 @@
         }
         .card:active { cursor: grabbing; opacity: 0.8; }
         .card img { width: 100%; height: 160px; object-fit: cover; border-radius: 4px; background-color: #eee; }
-        .card a { color: var(--primary); text-decoration: none; font-weight: bold; word-break: break-all; font-size: 18px; }
-        .card a:hover { text-decoration: underline; }
+        
+        /* Links & Text */
+        .card-title { color: var(--primary); text-decoration: none; font-weight: bold; word-break: break-all; font-size: 18px; }
+        a.card-title:hover { text-decoration: underline; }
+        
         .card .notes { font-size: 13px; color: var(--text); opacity: 0.8; white-space: pre-wrap; background: var(--bg); padding: 8px; border-radius: 4px; border: 1px solid var(--border); max-height: 100px; overflow-y: auto; }
+        
+        /* New Note Formatting */
+        .card-note-content {
+            font-size: 14px; color: var(--text); background: var(--bg); padding: 10px; 
+            border-radius: 4px; border: 1px solid var(--border); 
+            max-height: 200px; overflow-y: auto; user-select: text; line-height: 1.5;
+        }
+        .card-note-content ul, .card-note-content ol { margin: 5px 0; padding-left: 20px; }
         
         .card-actions { display: flex; gap: 5px; margin-top: auto; }
         .card-actions button { flex: 1; justify-content: center; }
@@ -104,25 +114,32 @@
         .tag { background-color: var(--primary); color: white; padding: 4px 8px; border-radius: 12px; font-size: 11px; font-weight: bold; cursor: pointer; }
         .tag:hover { opacity: 0.8; transform: scale(1.05); }
         
-        /* Modals */
+        /* Modals & Inputs */
         dialog {
             border: 1px solid var(--border); border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.5);
-            padding: 20px; width: 350px; background-color: var(--card-bg); color: var(--text);
+            padding: 20px; width: 380px; background-color: var(--card-bg); color: var(--text);
         }
         dialog::backdrop { background: rgba(0,0,0,0.7); backdrop-filter: blur(3px); }
         .form-group { margin-bottom: 15px; display: flex; flex-direction: column; gap: 5px; }
-        .form-group input, .form-group textarea, .form-group select {
+        .form-group input[type="text"], .form-group textarea, .form-group select {
             padding: 8px; border: 1px solid var(--border); border-radius: 4px;
-            background: var(--bg); color: var(--text); font-family: inherit;
+            background: var(--bg); color: var(--text); font-family: inherit; width: 100%; box-sizing: border-box;
         }
         .dialog-buttons { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
         
-        /* Help Modal Specifics */
-        #helpModal { width: 500px; max-width: 90vw; }
-        .help-content { max-height: 60vh; overflow-y: auto; line-height: 1.6; font-size: 14px; padding-right: 10px; }
-        .help-content h4 { color: var(--primary); margin-bottom: 5px; margin-top: 20px; }
-        .help-content ul { padding-left: 20px; margin-top: 5px; }
-
+        /* Rich Text Editor for Notes */
+        .rich-toolbar { display: flex; gap: 5px; margin-bottom: 5px; background: var(--bg); padding: 5px; border-radius: 4px; border: 1px solid var(--border); }
+        .rich-toolbar button { background: var(--card-bg); color: var(--text); padding: 5px 10px; border: 1px solid var(--border); font-size: 14px; border-radius: 3px; }
+        .rich-toolbar button:hover { background: var(--primary); color: white; }
+        .rich-editor { 
+            min-height: 100px; max-height: 250px; overflow-y: auto; padding: 10px; 
+            border: 1px solid var(--border); border-radius: 4px; background: var(--bg); outline: none;
+        }
+        
+        /* Media Upload Row */
+        .image-input-row { display: flex; gap: 5px; align-items: center; }
+        .image-input-row button { background-color: #7F8C8D; padding: 8px; font-size: 14px; }
+        
         /* Media Viewer Dialog */
         #mediaViewer { width: 80%; max-width: 1000px; padding: 10px; background: #000; text-align: center; }
         #mediaContent { width: 100%; height: 70vh; display: flex; justify-content: center; align-items: center; }
@@ -134,88 +151,66 @@
 <body>
 
     <header>
-        <h1>Simo's Archive</h1>
+        <h1>My Archive</h1>
         <div class="search-container">
             <input type="text" id="searchInput" placeholder="Search everywhere (name, tags, notes)..." onkeyup="render()">
         </div>
         <div class="header-actions">
+            <button id="cloudStatusBtn" class="cloud-btn" onclick="document.getElementById('cloudModal').showModal()">☁️ Cloud Sync Off</button>
             <button class="help-btn" onclick="document.getElementById('helpModal').showModal()" title="Help & Info">❓</button>
             <button class="theme-btn" onclick="toggleTheme()">🌓 Theme</button>
             
-            <button class="theme-btn" onclick="downloadCSVTemplate()">⬇️ CSV Template</button>
-            <button class="success" onclick="triggerImport('importJSON')">Import JSON</button>
-            <button class="success" onclick="triggerImport('importCSV')">Import CSV</button>
-            <button class="success" onclick="exportData()">Export Backup</button>
-            
-            <input type="file" id="importJSON" accept=".json" style="display: none;" onchange="importJSONData(event)">
-            <input type="file" id="importCSV" accept=".csv" style="display: none;" onchange="importCSVData(event)">
-            
             <button class="btn-tab" onclick="openTabModal()">+ New Tab</button>
-            <button class="btn-item" onclick="openItemModal()">+ Add Item</button>
+            <button class="btn-item" onclick="openItemModal()">+ Add Link Item</button>
+            <button class="btn-note" onclick="openNoteModal()">+ Add Note</button>
         </div>
     </header>
 
     <div class="tabs-container" id="tabsContainer"></div>
     <div class="items-grid" id="itemsContainer"></div>
 
-    <dialog id="helpModal">
-        <h3>📖 How to Use Your Archive</h3>
-        <div class="help-content">
-            <p>Welcome to your personal archive! Here is a quick guide on how to get the most out of it:</p>
-            
-            <h4>🗂️ Organizing Tabs & Items</h4>
-            <ul>
-                <li><strong>Drag and Drop:</strong> Click and hold any Tab or Item Card to drag it. You can reorder tabs, or change the order of items within a tab.</li>
-                <li><strong>Tab Backgrounds:</strong> Click the small ⚙️ gear icon on any tab to change its name, give it a solid background color, or paste an image URL to customize your workspace.</li>
-            </ul>
-
-            <h4>🎬 Adding Multimedia & Previews</h4>
-            <ul>
-                <li><strong>Auto-Previews:</strong> If you paste a YouTube link or a direct image link into the URL box, the system will automatically fetch the thumbnail/image for you. No need to fill out the "Override Image" box!</li>
-                <li><strong>Media Viewer:</strong> If an item is a YouTube video, local video (mp4), audio file (mp3), or image, a "▶️ View" button will appear. Click it to view or play the file in a popup overlay without leaving the page.</li>
-                <li><strong>Local Files:</strong> You can paste paths directly from your PC like <code>"C:\Users\Photo.jpg"</code>. The system will automatically fix the formatting and remove the quotes for you.</li>
-            </ul>
-
-            <h4>🔍 Searching & Tags</h4>
-            <ul>
-                <li><strong>Global Search:</strong> Typing in the top search bar searches <em>everything</em> across all tabs simultaneously.</li>
-                <li><strong>Clickable Tags:</strong> Add comma-separated tags when creating an item. If you click a tag pill on a card, it instantly filters your entire archive for that specific tag.</li>
-            </ul>
-
-            <h4>⚠️ Important: Saving Your Data!</h4>
-            <ul>
-                <li>This archive runs on <strong>Local Storage</strong>. Your data is saved locally inside this specific web browser.</li>
-                <li>If you clear your browser's Cache/Site Data, or open this file in a different browser, <strong>your data will not be there.</strong></li>
-                <li><strong>Best Practice:</strong> Use the green <strong>Export Backup</strong> button regularly. This saves a physical file to your PC. If you ever lose your data, just click <strong>Import JSON</strong> to restore everything instantly!</li>
-            </ul>
+    <dialog id="cloudModal">
+        <h3>☁️ Setup Cloud Sync</h3>
+        <p style="font-size: 13px; opacity: 0.8;">Paste your Firebase config block below. Your keys are saved locally.</p>
+        <div class="form-group">
+            <textarea id="firebaseConfigInput" rows="8" placeholder="const firebaseConfig = { ... };" style="font-family: monospace; font-size: 12px;"></textarea>
         </div>
         <div class="dialog-buttons">
-            <button class="danger" onclick="document.getElementById('helpModal').close()">Close Guide</button>
+            <button class="danger" onclick="disconnectCloud()">Disconnect</button>
+            <button class="danger" onclick="document.getElementById('cloudModal').close()">Cancel</button>
+            <button class="success" onclick="connectToCloud()">Connect & Sync</button>
+        </div>
+    </dialog>
+
+    <dialog id="helpModal">
+        <h3>📖 Features & Help</h3>
+        <div class="help-content">
+            <p><strong>☁️ Syncing & Backups:</strong> Cloud sync keeps items updated across devices automatically. You can also manually export/import JSON backups below if you prefer staying offline.</p>
+            <hr>
+            <button class="theme-btn btn-small" onclick="downloadCSVTemplate()">⬇️ CSV Template</button>
+            <button class="success btn-small" onclick="triggerImport('importJSON')">Import JSON</button>
+            <button class="success btn-small" onclick="triggerImport('importCSV')">Import CSV</button>
+            <button class="success btn-small" onclick="exportData()">Export Backup</button>
+            
+            <input type="file" id="importJSON" accept=".json" style="display: none;" onchange="importJSONData(event)">
+            <input type="file" id="importCSV" accept=".csv" style="display: none;" onchange="importCSVData(event)">
+        </div>
+        <div class="dialog-buttons">
+            <button class="danger" onclick="document.getElementById('helpModal').close()">Close</button>
         </div>
     </dialog>
 
     <dialog id="tabModal">
         <h3 id="tabModalTitle">Add New Tab</h3>
-        <div class="form-group">
-            <label>Tab Name</label>
-            <input type="text" id="tabNameInput">
-        </div>
+        <div class="form-group"><label>Tab Name</label><input type="text" id="tabNameInput"></div>
         <div class="form-group">
             <label>Background Type</label>
             <select id="tabBgType" onchange="toggleBgInputs()">
-                <option value="none">Default Background</option>
-                <option value="color">Solid Color</option>
-                <option value="image">Image URL / Local File</option>
+                <option value="none">Default</option><option value="color">Solid Color</option><option value="image">Image URL / Local File</option>
             </select>
         </div>
-        <div class="form-group" id="bgColorGroup" style="display:none;">
-            <label>Pick Color</label>
-            <input type="color" id="tabBgColor" value="#333333">
-        </div>
-        <div class="form-group" id="bgImageGroup" style="display:none;">
-            <label>Background Image Path</label>
-            <input type="text" id="tabBgImage" placeholder='Paste link or "C:\Path..."'>
-        </div>
+        <div class="form-group" id="bgColorGroup" style="display:none;"><label>Pick Color</label><input type="color" id="tabBgColor" value="#333333"></div>
+        <div class="form-group" id="bgImageGroup" style="display:none;"><label>Background Image Path</label><input type="text" id="tabBgImage" placeholder='Paste link...'></div>
         <div class="dialog-buttons">
             <button class="danger" onclick="document.getElementById('tabModal').close()">Cancel</button>
             <button class="btn-tab" onclick="saveTab()">Save Tab</button>
@@ -223,30 +218,44 @@
     </dialog>
 
     <dialog id="itemModal">
-        <h3 id="itemModalTitle">Add New Item</h3>
+        <h3 id="itemModalTitle">Add New Link Item</h3>
+        <div class="form-group"><label>Name</label><input type="text" id="itemName" placeholder="e.g., Guide"></div>
+        <div class="form-group"><label>Link / Local File Path</label><input type="text" id="itemUrl" placeholder='Paste link or "C:\Path..."'></div>
+        <div class="form-group"><label>Notes / Details</label><textarea id="itemNotes" rows="2" placeholder="Brief notes..."></textarea></div>
+        <div class="form-group"><label>Tags (comma separated)</label><input type="text" id="itemTags" placeholder="tutorial, ui"></div>
         <div class="form-group">
-            <label>Name</label>
-            <input type="text" id="itemName" placeholder="e.g., Quick Reference Guide">
-        </div>
-        <div class="form-group">
-            <label>Link / Local File Path</label>
-            <input type="text" id="itemUrl" placeholder='Paste link or "C:\Path..."'>
-        </div>
-        <div class="form-group">
-            <label>Notes / Code Snippet</label>
-            <textarea id="itemNotes" rows="3" placeholder="Jot down notes or paste code..."></textarea>
-        </div>
-        <div class="form-group">
-            <label>Tags (comma separated)</label>
-            <input type="text" id="itemTags" placeholder="tutorial, ui, guide">
-        </div>
-        <div class="form-group">
-            <label>Override Image URL (Optional)</label>
-            <input type="text" id="itemImage" placeholder="Leave blank to auto-fetch video thumbnail">
+            <label>Thumbnail Image</label>
+            <div class="image-input-row">
+                <input type="text" id="itemImage" placeholder="URL or leave blank to auto-fetch">
+                <button type="button" title="Upload Local Image" onclick="document.getElementById('imageUploadInput').click()">📁</button>
+            </div>
+            <input type="file" id="imageUploadInput" accept="image/*" style="display: none;" onchange="handleImageUpload(event)">
+            <input type="hidden" id="itemImageBase64">
         </div>
         <div class="dialog-buttons">
             <button class="danger" onclick="document.getElementById('itemModal').close()">Cancel</button>
             <button class="btn-item" onclick="saveItem()">Save Item</button>
+        </div>
+    </dialog>
+
+    <dialog id="noteModal">
+        <h3 id="noteModalTitle">Add New Note</h3>
+        <div class="form-group"><label>Note Title</label><input type="text" id="noteTitle" placeholder="e.g., Meeting Ideas"></div>
+        <div class="form-group"><label>Tags (comma separated)</label><input type="text" id="noteTags" placeholder="ideas, work"></div>
+        <div class="form-group">
+            <label>Content</label>
+            <div class="rich-toolbar">
+                <button type="button" onclick="document.execCommand('bold', false, null)" title="Bold"><b>B</b></button>
+                <button type="button" onclick="document.execCommand('italic', false, null)" title="Italic"><i>I</i></button>
+                <button type="button" onclick="document.execCommand('underline', false, null)" title="Underline"><u>U</u></button>
+                <button type="button" onclick="document.execCommand('insertUnorderedList', false, null)" title="Bullet List">• List</button>
+                <button type="button" onclick="document.execCommand('insertOrderedList', false, null)" title="Numbered List">1. List</button>
+            </div>
+            <div id="noteContent" class="rich-editor" contenteditable="true"></div>
+        </div>
+        <div class="dialog-buttons">
+            <button class="danger" onclick="document.getElementById('noteModal').close()">Cancel</button>
+            <button class="btn-note" onclick="saveNote()">Save Note</button>
         </div>
     </dialog>
 
@@ -259,13 +268,10 @@
         // State
         let archiveData = JSON.parse(localStorage.getItem('myArchiveData')) || [];
         let activeTabIndex = 0;
+        let editingTabIndex = null; let editingItemInfo = null;
+        let draggedType = null; let draggedIndex = null; let draggedOriginalTabIndex = null;
         
-        let editingTabIndex = null;
-        let editingItemInfo = null;
-        
-        let draggedType = null;
-        let draggedIndex = null;
-        let draggedOriginalTabIndex = null;
+        let db = null; let isCloudActive = false; let cloudListener = null;
 
         // Init Theme
         if (localStorage.getItem('darkMode') === 'true') document.body.classList.add('dark-mode');
@@ -275,91 +281,149 @@
             applyTabBackground();
         }
 
-        function saveData() {
-            localStorage.setItem('myArchiveData', JSON.stringify(archiveData));
-            render();
+        /* --- Firebase Cloud Integration --- */
+        function extractKey(key, str) {
+            const match = str.match(new RegExp(`${key}\\s*:\\s*['"]([^'"]+)['"]`));
+            return match ? match[1] : null;
         }
 
-        function cleanString(str) { return str ? str.trim().replace(/^"|"$/g, '').replace(/^'|'$/g, '') : ''; }
-        function triggerImport(id) { document.getElementById(id).click(); }
+        function initFirebase(configStr) {
+            try {
+                const firebaseConfig = {
+                    apiKey: extractKey('apiKey', configStr), authDomain: extractKey('authDomain', configStr),
+                    projectId: extractKey('projectId', configStr), storageBucket: extractKey('storageBucket', configStr),
+                    messagingSenderId: extractKey('messagingSenderId', configStr), appId: extractKey('appId', configStr)
+                };
+                if (!firebaseConfig.apiKey || !firebaseConfig.projectId) throw new Error("Missing keys");
+                if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+                db = firebase.firestore(); isCloudActive = true;
+                
+                const btn = document.getElementById('cloudStatusBtn');
+                btn.innerText = "☁️ Connected"; btn.classList.add('cloud-active');
+                document.getElementById('cloudModal').close();
+                listenToCloud();
+            } catch (err) { alert("Could not connect to Firebase."); disconnectCloud(); }
+        }
 
-        /* --- Export & Import Functions --- */
+        function connectToCloud() {
+            const input = document.getElementById('firebaseConfigInput').value;
+            if (!input) return alert("Please paste your config");
+            localStorage.setItem('myFirebaseConfig', input); initFirebase(input);
+        }
+
+        function disconnectCloud() {
+            localStorage.removeItem('myFirebaseConfig');
+            if (cloudListener) cloudListener(); 
+            isCloudActive = false; db = null;
+            const btn = document.getElementById('cloudStatusBtn');
+            btn.innerText = "☁️ Sync Off"; btn.classList.remove('cloud-active');
+            document.getElementById('cloudModal').close(); document.getElementById('firebaseConfigInput').value = '';
+        }
+
+        function listenToCloud() {
+            if (!db) return;
+            cloudListener = db.collection('appSync').doc('myArchiveData').onSnapshot((doc) => {
+                if (doc.exists) {
+                    archiveData = doc.data().data || [];
+                    localStorage.setItem('myArchiveData', JSON.stringify(archiveData)); render();
+                } else pushToCloud();
+            }, () => alert("Permission denied or database error."));
+        }
+
+        function pushToCloud() {
+            if (isCloudActive && db) db.collection('appSync').doc('myArchiveData').set({ data: archiveData });
+        }
+
+        function saveData() { localStorage.setItem('myArchiveData', JSON.stringify(archiveData)); pushToCloud(); render(); }
+
+        window.onload = () => {
+            const savedConfig = localStorage.getItem('myFirebaseConfig');
+            if (savedConfig) { document.getElementById('firebaseConfigInput').value = savedConfig; initFirebase(savedConfig); }
+        };
+
+        /* --- Export & Import --- */
         function exportData() {
-            if (archiveData.length === 0) return alert("Nothing to export!");
             const a = document.createElement('a');
             a.href = URL.createObjectURL(new Blob([JSON.stringify(archiveData, null, 2)], { type: "application/json" }));
-            a.download = "archive_backup.json";
-            a.click();
+            a.download = "archive_backup.json"; a.click();
         }
+        function triggerImport(id) { document.getElementById(id).click(); }
+        function cleanString(str) { return str ? str.trim().replace(/^"|"$/g, '').replace(/^'|'$/g, '') : ''; }
 
         function importJSONData(event) {
-            const file = event.target.files[0];
-            if (!file) return;
+            const file = event.target.files[0]; if (!file) return;
             const reader = new FileReader();
             reader.onload = function(e) {
-                try {
-                    let data = JSON.parse(e.target.result);
-                    if (Array.isArray(data)) { archiveData = data; saveData(); alert("Backup imported!"); }
-                } catch (err) { alert("Invalid JSON file."); }
-            };
-            reader.readAsText(file);
-            event.target.value = '';
+                try { let data = JSON.parse(e.target.result); if (Array.isArray(data)) { archiveData = data; saveData(); alert("Imported!"); } } 
+                catch (err) { alert("Invalid JSON"); }
+            }; reader.readAsText(file); event.target.value = '';
         }
 
         function downloadCSVTemplate() {
-            const csvContent = 
-                "Tab,Name,URL,Image,Notes,Tags\n" +
-                "Recipes,Chocolate Chip Cookies,https://example.com/cookies,,Secret family recipe,baking; dessert\n" +
-                "Workouts,10 Min Core Routine,https://example.com/core,,Do this every morning,fitness; health\n" +
-                "Gardening,How to grow Tomatoes,https://example.com/tomatoes,,Best soil types for summer,plants; outdoor";
-
-            const blob = new Blob([csvContent], { type: 'text/csv' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = "archive_import_template.csv";
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
+            const csvContent = "Tab,Name,URL,Image,Notes,Tags\nRecipes,Cookies,https://example.com,,Good,baking";
+            const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([csvContent], { type: 'text/csv' }));
+            a.download = "template.csv"; document.body.appendChild(a); a.click(); document.body.removeChild(a);
         }
 
         function importCSVData(event) {
-            const file = event.target.files[0];
-            if (!file) return;
+            const file = event.target.files[0]; if (!file) return;
             const reader = new FileReader();
             reader.onload = function(e) {
                 const lines = e.target.result.split('\n');
-                let count = 0;
                 for (let i = 1; i < lines.length; i++) {
-                    const line = lines[i].trim();
-                    if (!line) continue;
+                    const line = lines[i].trim(); if (!line) continue;
                     const parts = line.split(','); 
                     if (parts.length >= 3) {
                         const tabName = cleanString(parts[0]);
                         let tabObj = archiveData.find(t => t.name.toLowerCase() === tabName.toLowerCase());
-                        if (!tabObj) {
-                            tabObj = { name: tabName, bgType: 'none', bgVal: '', items: [] };
-                            archiveData.push(tabObj);
-                        }
+                        if (!tabObj) { tabObj = { name: tabName, bgType: 'none', bgVal: '', items: [] }; archiveData.push(tabObj); }
                         tabObj.items.push({
-                            name: cleanString(parts[1]), url: cleanString(parts[2]),
+                            type: 'link', name: cleanString(parts[1]), url: cleanString(parts[2]), 
                             image: cleanString(parts[3]), notes: cleanString(parts[4]),
                             tags: cleanString(parts[5]).split(';').map(t=>t.trim()).filter(t=>t)
                         });
-                        count++;
                     }
                 }
-                saveData(); alert(`Imported ${count} items!`);
-            };
-            reader.readAsText(file); event.target.value = '';
+                saveData(); alert(`Import successful!`);
+            }; reader.readAsText(file); event.target.value = '';
+        }
+
+        /* --- Image Compression (Canvas) --- */
+        function handleImageUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const img = new Image();
+                img.onload = function() {
+                    const canvas = document.createElement('canvas');
+                    const MAX_WIDTH = 320; // Compress down to max 320px width
+                    let width = img.width; let height = img.height;
+                    
+                    if (width > MAX_WIDTH) {
+                        height = Math.round((height * MAX_WIDTH) / width);
+                        width = MAX_WIDTH;
+                    }
+                    
+                    canvas.width = width; canvas.height = height;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, width, height);
+                    
+                    // Convert to base64 string at 60% quality
+                    const base64Str = canvas.toDataURL('image/jpeg', 0.6);
+                    document.getElementById('itemImageBase64').value = base64Str;
+                    document.getElementById('itemImage').value = "[ Local Compressed Image Attached ]";
+                }
+                img.src = e.target.result;
+            }
+            reader.readAsDataURL(file);
         }
 
         /* --- Tab Functions --- */
         function openTabModal(editIndex = null) {
             editingTabIndex = editIndex;
             document.getElementById('tabModalTitle').innerText = editIndex === null ? 'Add New Tab' : 'Edit Tab Settings';
-            
             if (editIndex !== null) {
                 const tab = archiveData[editIndex];
                 document.getElementById('tabNameInput').value = tab.name;
@@ -367,68 +431,41 @@
                 if(tab.bgType === 'color') document.getElementById('tabBgColor').value = tab.bgVal || '#333333';
                 if(tab.bgType === 'image') document.getElementById('tabBgImage').value = tab.bgVal || '';
             } else {
-                document.getElementById('tabNameInput').value = '';
-                document.getElementById('tabBgType').value = 'none';
-                document.getElementById('tabBgImage').value = '';
+                document.getElementById('tabNameInput').value = ''; document.getElementById('tabBgType').value = 'none';
             }
-            toggleBgInputs();
-            document.getElementById('tabModal').showModal();
+            toggleBgInputs(); document.getElementById('tabModal').showModal();
         }
-
         function toggleBgInputs() {
             const type = document.getElementById('tabBgType').value;
             document.getElementById('bgColorGroup').style.display = (type === 'color') ? 'flex' : 'none';
             document.getElementById('bgImageGroup').style.display = (type === 'image') ? 'flex' : 'none';
         }
-
         function saveTab() {
-            const name = document.getElementById('tabNameInput').value.trim();
-            if (!name) return;
-            
+            const name = document.getElementById('tabNameInput').value.trim(); if (!name) return;
             const bgType = document.getElementById('tabBgType').value;
-            let bgVal = '';
-            if (bgType === 'color') bgVal = document.getElementById('tabBgColor').value;
-            if (bgType === 'image') bgVal = cleanString(document.getElementById('tabBgImage').value);
-
-            if (editingTabIndex !== null) {
-                archiveData[editingTabIndex].name = name;
-                archiveData[editingTabIndex].bgType = bgType;
-                archiveData[editingTabIndex].bgVal = bgVal;
-            } else {
-                archiveData.push({ name, bgType, bgVal, items: [] });
-                activeTabIndex = archiveData.length - 1;
-            }
-            document.getElementById('tabModal').close();
-            saveData();
+            let bgVal = bgType === 'color' ? document.getElementById('tabBgColor').value : bgType === 'image' ? cleanString(document.getElementById('tabBgImage').value) : '';
+            if (editingTabIndex !== null) { archiveData[editingTabIndex].name = name; archiveData[editingTabIndex].bgType = bgType; archiveData[editingTabIndex].bgVal = bgVal; } 
+            else { archiveData.push({ name, bgType, bgVal, items: [] }); activeTabIndex = archiveData.length - 1; }
+            document.getElementById('tabModal').close(); saveData();
         }
+        function deleteTab(index) { if (confirm('Delete tab and all items?')) { archiveData.splice(index, 1); activeTabIndex = 0; saveData(); } }
 
-        function deleteTab(index) {
-            if (confirm('Delete this tab and all its items?')) {
-                archiveData.splice(index, 1);
-                activeTabIndex = 0; document.getElementById('searchInput').value = '';
-                saveData();
-            }
-        }
-
-        /* --- Item Functions --- */
+        /* --- Item (Link) Functions --- */
         function openItemModal(tabIndex = null, itemIndex = null) {
             if (archiveData.length === 0) return alert('Create a tab first!');
             editingItemInfo = (itemIndex !== null) ? { tabIndex, itemIndex } : null;
-            document.getElementById('itemModalTitle').innerText = editingItemInfo ? 'Edit Item' : 'Add New Item';
+            document.getElementById('itemModalTitle').innerText = editingItemInfo ? 'Edit Link' : 'Add New Link';
+            
+            document.getElementById('itemImageBase64').value = ''; // Clear image buffer
 
             if (editingItemInfo) {
                 const item = archiveData[tabIndex].items[itemIndex];
-                document.getElementById('itemName').value = item.name;
-                document.getElementById('itemUrl').value = item.url;
-                document.getElementById('itemNotes').value = item.notes || '';
-                document.getElementById('itemTags').value = (item.tags || []).join(', ');
+                document.getElementById('itemName').value = item.name; document.getElementById('itemUrl').value = item.url;
+                document.getElementById('itemNotes').value = item.notes || ''; document.getElementById('itemTags').value = (item.tags || []).join(', ');
                 document.getElementById('itemImage').value = item.image || '';
             } else {
-                document.getElementById('itemName').value = '';
-                document.getElementById('itemUrl').value = '';
-                document.getElementById('itemNotes').value = '';
-                document.getElementById('itemTags').value = '';
-                document.getElementById('itemImage').value = '';
+                document.getElementById('itemName').value = ''; document.getElementById('itemUrl').value = '';
+                document.getElementById('itemNotes').value = ''; document.getElementById('itemTags').value = ''; document.getElementById('itemImage').value = '';
             }
             document.getElementById('itemModal').showModal();
         }
@@ -437,93 +474,88 @@
             const name = cleanString(document.getElementById('itemName').value);
             const url = cleanString(document.getElementById('itemUrl').value);
             if (!name || !url) return;
+            
+            // Check if user attached a base64 image, otherwise use URL input
+            const base64Buffer = document.getElementById('itemImageBase64').value;
+            const finalImage = base64Buffer ? base64Buffer : cleanString(document.getElementById('itemImage').value);
 
             const newItem = {
-                name, url,
-                notes: document.getElementById('itemNotes').value.trim(),
-                tags: document.getElementById('itemTags').value.split(',').map(t=>t.trim()).filter(t=>t),
-                image: cleanString(document.getElementById('itemImage').value)
+                type: 'link', name, url, notes: document.getElementById('itemNotes').value.trim(),
+                tags: document.getElementById('itemTags').value.split(',').map(t=>t.trim()).filter(t=>t), image: finalImage
             };
+            if (editingItemInfo) archiveData[editingItemInfo.tabIndex].items[editingItemInfo.itemIndex] = newItem;
+            else archiveData[activeTabIndex].items.push(newItem);
+            document.getElementById('itemModal').close(); saveData();
+        }
 
+        /* --- Note Functions --- */
+        function openNoteModal(tabIndex = null, itemIndex = null) {
+            if (archiveData.length === 0) return alert('Create a tab first!');
+            editingItemInfo = (itemIndex !== null) ? { tabIndex, itemIndex } : null;
+            document.getElementById('noteModalTitle').innerText = editingItemInfo ? 'Edit Note' : 'Add New Note';
+            
             if (editingItemInfo) {
-                archiveData[editingItemInfo.tabIndex].items[editingItemInfo.itemIndex] = newItem;
+                const item = archiveData[tabIndex].items[itemIndex];
+                document.getElementById('noteTitle').value = item.name;
+                document.getElementById('noteTags').value = (item.tags || []).join(', ');
+                document.getElementById('noteContent').innerHTML = item.content || '';
             } else {
-                archiveData[activeTabIndex].items.push(newItem);
+                document.getElementById('noteTitle').value = '';
+                document.getElementById('noteTags').value = '';
+                document.getElementById('noteContent').innerHTML = '';
             }
-            document.getElementById('itemModal').close();
-            saveData();
+            document.getElementById('noteModal').showModal();
         }
 
-        function deleteItem(tabIndex, itemIndex) {
-            if(confirm("Delete this item?")) {
-                archiveData[tabIndex].items.splice(itemIndex, 1);
-                saveData();
-            }
+        function saveNote() {
+            const name = document.getElementById('noteTitle').value.trim();
+            const content = document.getElementById('noteContent').innerHTML;
+            if (!name) return;
+
+            const newNote = {
+                type: 'note', name, content,
+                tags: document.getElementById('noteTags').value.split(',').map(t=>t.trim()).filter(t=>t)
+            };
+            if (editingItemInfo) archiveData[editingItemInfo.tabIndex].items[editingItemInfo.itemIndex] = newNote;
+            else archiveData[activeTabIndex].items.push(newNote);
+            document.getElementById('noteModal').close(); saveData();
         }
 
-        /* --- Preview & Multimedia Handlers --- */
-        function getYoutubeId(url) {
-            const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
-            const match = url.match(regExp);
-            return (match && match[2].length === 11) ? match[2] : null;
-        }
+        function deleteItem(tabIndex, itemIndex) { if(confirm("Delete this item?")) { archiveData[tabIndex].items.splice(itemIndex, 1); saveData(); } }
 
-        function isImageLink(url) { return /\.(jpeg|jpg|gif|png|webp|bmp)(\?.*)?$/i.test(url); }
+        /* --- Media Viewers --- */
+        function getYoutubeId(url) { const m = url.match(/^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/); return (m && m[2].length === 11) ? m[2] : null; }
+        function isImageLink(url) { return /\.(jpeg|jpg|gif|png|webp|bmp)(\?.*)?$/i.test(url) || url.startsWith('data:image'); }
         function isVideoLink(url) { return /\.(mp4|webm|ogg)(\?.*)?$/i.test(url); }
         function isAudioLink(url) { return /\.(mp3|wav|ogg)(\?.*)?$/i.test(url); }
 
         function openViewer(tabIndex, itemIndex) {
-            const item = archiveData[tabIndex].items[itemIndex];
-            const content = document.getElementById('mediaContent');
-            const ytId = getYoutubeId(item.url);
-            
-            let finalUrl = item.url;
-            if (finalUrl.match(/^[a-zA-Z]:\\/)) finalUrl = 'file:///' + finalUrl.replace(/\\/g, '/');
+            const item = archiveData[tabIndex].items[itemIndex]; const content = document.getElementById('mediaContent');
+            const ytId = item.url ? getYoutubeId(item.url) : null;
+            let finalUrl = item.url ? (item.url.match(/^[a-zA-Z]:\\/) ? 'file:///' + item.url.replace(/\\/g, '/') : item.url) : '';
 
-            if (ytId) {
-                content.innerHTML = `<iframe src="https://www.youtube.com/embed/${ytId}?autoplay=1" allow="autoplay; fullscreen"></iframe>`;
-            } else if (isVideoLink(item.url)) {
-                content.innerHTML = `<video controls autoplay src="${finalUrl}"></video>`;
-            } else if (isAudioLink(item.url)) {
-                content.innerHTML = `<audio controls autoplay src="${finalUrl}"></audio>`;
-            } else if (isImageLink(item.url)) {
-                content.innerHTML = `<img src="${finalUrl}">`;
-            } else {
-                alert("Cannot preview this file type directly. Please click the link to open it.");
-                return;
-            }
+            if (ytId) content.innerHTML = `<iframe src="https://www.youtube.com/embed/${ytId}?autoplay=1" allow="autoplay; fullscreen"></iframe>`;
+            else if (isVideoLink(item.url)) content.innerHTML = `<video controls autoplay src="${finalUrl}"></video>`;
+            else if (isAudioLink(item.url)) content.innerHTML = `<audio controls autoplay src="${finalUrl}"></audio>`;
+            else if (isImageLink(item.url) || item.image) content.innerHTML = `<img src="${finalUrl || item.image}">`;
+            else return alert("Cannot preview this file.");
             document.getElementById('mediaViewer').showModal();
         }
-
-        function searchTag(tag) {
-            document.getElementById('searchInput').value = tag;
-            render();
-        }
+        function searchTag(tag) { document.getElementById('searchInput').value = tag; render(); }
 
         /* --- Drag and Drop --- */
-        function handleDragStart(e, type, index, tabIndex = null) {
-            draggedType = type;
-            draggedIndex = index;
-            draggedOriginalTabIndex = tabIndex;
-            e.target.style.opacity = '0.5';
-        }
+        function handleDragStart(e, type, index, tabIndex = null) { draggedType = type; draggedIndex = index; draggedOriginalTabIndex = tabIndex; e.target.style.opacity = '0.5'; }
         function handleDragOver(e) { e.preventDefault(); }
         function handleDrop(e, dropType, targetIndex) {
-            e.preventDefault();
-            e.target.style.opacity = '1';
-            
+            e.preventDefault(); e.target.style.opacity = '1';
             if (draggedType === 'tab' && dropType === 'tab' && draggedIndex !== targetIndex) {
-                const movedTab = archiveData.splice(draggedIndex, 1)[0];
-                archiveData.splice(targetIndex, 0, movedTab);
-                if(activeTabIndex === draggedIndex) activeTabIndex = targetIndex;
-                else if(activeTabIndex === targetIndex) activeTabIndex = draggedIndex;
+                const movedTab = archiveData.splice(draggedIndex, 1)[0]; archiveData.splice(targetIndex, 0, movedTab);
+                if(activeTabIndex === draggedIndex) activeTabIndex = targetIndex; else if(activeTabIndex === targetIndex) activeTabIndex = draggedIndex;
                 saveData();
             }
             else if (draggedType === 'item' && dropType === 'item' && document.getElementById('searchInput').value.trim() === '') {
                 if (draggedOriginalTabIndex === activeTabIndex && draggedIndex !== targetIndex) {
-                    const items = archiveData[activeTabIndex].items;
-                    const movedItem = items.splice(draggedIndex, 1)[0];
-                    items.splice(targetIndex, 0, movedItem);
+                    const items = archiveData[activeTabIndex].items; const movedItem = items.splice(draggedIndex, 1)[0]; items.splice(targetIndex, 0, movedItem);
                     saveData();
                 }
             }
@@ -532,132 +564,95 @@
 
         /* --- Render --- */
         function applyTabBackground() {
-            if (!archiveData[activeTabIndex]) {
-                document.body.style.background = 'var(--bg)';
-                return;
-            }
+            if (!archiveData[activeTabIndex]) { document.body.style.background = 'var(--bg)'; return; }
             const tab = archiveData[activeTabIndex];
-            if (tab.bgType === 'color' && tab.bgVal) {
-                document.body.style.background = tab.bgVal;
-            } else if (tab.bgType === 'image' && tab.bgVal) {
-                let finalBg = tab.bgVal;
-                if (finalBg.match(/^[a-zA-Z]:\\/)) finalBg = 'file:///' + finalBg.replace(/\\/g, '/');
-                
-                document.body.style.background = `url('${finalBg}')`;
-                document.body.style.backgroundSize = 'cover';
-                document.body.style.backgroundPosition = 'center';
-                document.body.style.backgroundAttachment = 'fixed';
-            } else {
-                document.body.style.background = 'var(--bg)';
-            }
+            if (tab.bgType === 'color' && tab.bgVal) document.body.style.background = tab.bgVal;
+            else if (tab.bgType === 'image' && tab.bgVal) {
+                let finalBg = tab.bgVal.match(/^[a-zA-Z]:\\/) ? 'file:///' + tab.bgVal.replace(/\\/g, '/') : tab.bgVal;
+                document.body.style.background = `url('${finalBg}')`; document.body.style.backgroundSize = 'cover'; document.body.style.backgroundPosition = 'center'; document.body.style.backgroundAttachment = 'fixed';
+            } else document.body.style.background = 'var(--bg)';
         }
 
         function render() {
-            const tabsContainer = document.getElementById('tabsContainer');
-            const itemsContainer = document.getElementById('itemsContainer');
-            const searchQuery = document.getElementById('searchInput').value.toLowerCase().trim();
-            const isSearching = searchQuery !== '';
+            const tabsContainer = document.getElementById('tabsContainer'); const itemsContainer = document.getElementById('itemsContainer');
+            const searchQuery = document.getElementById('searchInput').value.toLowerCase().trim(); const isSearching = searchQuery !== '';
             
             tabsContainer.innerHTML = ''; itemsContainer.innerHTML = '';
             if (archiveData.length === 0) return itemsContainer.innerHTML = '<p>No tabs yet. Click + New Tab!</p>';
 
             applyTabBackground();
 
-            // Render Tabs
             archiveData.forEach((tab, index) => {
                 const tabEl = document.createElement('div');
                 tabEl.className = `tab ${index === activeTabIndex && !isSearching ? 'active' : ''}`;
-                tabEl.draggable = true;
-                tabEl.ondragstart = (e) => handleDragStart(e, 'tab', index);
-                tabEl.ondragover = handleDragOver;
-                tabEl.ondrop = (e) => handleDrop(e, 'tab', index);
-                tabEl.ondragend = (e) => e.target.style.opacity = '1';
-
-                tabEl.innerHTML = `
-                    <span onclick="switchTab(${index})">${tab.name}</span>
-                    <button class="icon-btn" onclick="openTabModal(${index})">⚙️</button>
-                    <button class="icon-btn danger" onclick="deleteTab(${index})" style="color:red; opacity:1;">✖</button>
-                `;
+                tabEl.draggable = true; tabEl.ondragstart = (e) => handleDragStart(e, 'tab', index); tabEl.ondragover = handleDragOver; tabEl.ondrop = (e) => handleDrop(e, 'tab', index); tabEl.ondragend = (e) => e.target.style.opacity = '1';
+                tabEl.innerHTML = `<span onclick="switchTab(${index})">${tab.name}</span> <button class="icon-btn" onclick="openTabModal(${index})">⚙️</button> <button class="icon-btn danger" onclick="deleteTab(${index})" style="color:red; opacity:1;">✖</button>`;
                 tabsContainer.appendChild(tabEl);
             });
 
-            // Gather Items to Render
             let itemsToRender = [];
             if (isSearching) {
-                archiveData.forEach((tab, tIndex) => {
-                    tab.items.forEach((item, iIndex) => {
-                        const inName = item.name.toLowerCase().includes(searchQuery);
-                        const inNotes = (item.notes || '').toLowerCase().includes(searchQuery);
-                        const inTags = (item.tags || []).some(tag => tag.toLowerCase().includes(searchQuery));
-                        if (inName || inNotes || inTags) {
-                            itemsToRender.push({ item, tIndex, iIndex, tabName: tab.name });
-                        }
-                    });
-                });
-            } else {
-                itemsToRender = (archiveData[activeTabIndex].items || []).map((item, iIndex) => 
-                    ({ item, tIndex: activeTabIndex, iIndex, tabName: null })
-                );
-            }
+                archiveData.forEach((tab, tIndex) => tab.items.forEach((item, iIndex) => {
+                    // Backwards compatibility for items without type
+                    if(!item.type) item.type = 'link';
+                    
+                    const nameMatch = item.name.toLowerCase().includes(searchQuery);
+                    const noteMatch = (item.notes || item.content || '').toLowerCase().includes(searchQuery);
+                    const tagMatch = (item.tags || []).some(tag => tag.toLowerCase().includes(searchQuery));
+                    if (nameMatch || noteMatch || tagMatch) itemsToRender.push({ item, tIndex, iIndex, tabName: tab.name });
+                }));
+            } else itemsToRender = (archiveData[activeTabIndex].items || []).map((item, iIndex) => {
+                if(!item.type) item.type = 'link'; // Apply type to old data
+                return { item, tIndex: activeTabIndex, iIndex, tabName: null };
+            });
 
-            if (itemsToRender.length === 0) {
-                itemsContainer.innerHTML = isSearching ? '<p>No matches found.</p>' : '<p>No items here yet.</p>';
-                return;
-            }
+            if (itemsToRender.length === 0) return itemsContainer.innerHTML = isSearching ? '<p>No matches found.</p>' : '<p>No items here yet.</p>';
 
-            // Draw Cards
-            itemsToRender.forEach((data, renderIndex) => {
-                const card = document.createElement('div');
-                card.className = 'card';
-                if (!isSearching) {
-                    card.draggable = true;
-                    card.ondragstart = (e) => handleDragStart(e, 'item', data.iIndex, data.tIndex);
-                    card.ondragover = handleDragOver;
-                    card.ondrop = (e) => handleDrop(e, 'item', data.iIndex);
-                    card.ondragend = (e) => e.target.style.opacity = '1';
-                }
+            itemsToRender.forEach((data) => {
+                const card = document.createElement('div'); card.className = 'card';
+                if (!isSearching) { card.draggable = true; card.ondragstart = (e) => handleDragStart(e, 'item', data.iIndex, data.tIndex); card.ondragover = handleDragOver; card.ondrop = (e) => handleDrop(e, 'item', data.iIndex); card.ondragend = (e) => e.target.style.opacity = '1'; }
 
                 const item = data.item;
-                const ytId = getYoutubeId(item.url);
-                
-                let imgSrc = item.image; 
-                if (!imgSrc) {
-                    if (ytId) imgSrc = `https://img.youtube.com/vi/${ytId}/hqdefault.jpg`;
-                    else if (isImageLink(item.url)) imgSrc = item.url.match(/^[a-zA-Z]:\\/) ? 'file:///' + item.url.replace(/\\/g, '/') : item.url;
-                }
-                const imgHtml = imgSrc ? `<img src="${imgSrc}" onerror="this.style.display='none'">` : '';
-
-                let finalUrl = item.url.match(/^[a-zA-Z]:\\/) ? 'file:///' + item.url.replace(/\\/g, '/') : item.url;
-                
-                const canView = ytId || isImageLink(item.url) || isVideoLink(item.url) || isAudioLink(item.url);
-                const viewBtn = canView ? `<button class="btn-small view-btn" onclick="openViewer(${data.tIndex}, ${data.iIndex})">▶️ View</button>` : '';
-
                 const tagsHtml = item.tags && item.tags.length ? `<div class="tags">${item.tags.map(t => `<span class="tag" onclick="searchTag('${t}')">${t}</span>`).join('')}</div>` : '';
-                const notesHtml = item.notes ? `<div class="notes">${item.notes}</div>` : '';
                 const badge = data.tabName ? `<small style="color:var(--primary)">From: ${data.tabName}</small>` : '';
 
-                card.innerHTML = `
-                    ${imgHtml}
-                    <a href="${finalUrl}" target="_blank">${item.name}</a>
-                    ${badge}
-                    ${tagsHtml}
-                    ${notesHtml}
-                    <div class="card-actions">
-                        ${viewBtn}
-                        <button class="btn-small edit-btn" onclick="openItemModal(${data.tIndex}, ${data.iIndex})">✏️ Edit</button>
-                        <button class="btn-small danger" onclick="deleteItem(${data.tIndex}, ${data.iIndex})">🗑️</button>
-                    </div>
-                `;
+                // RENDER NOTE ITEM
+                if (item.type === 'note') {
+                    card.innerHTML = `
+                        <strong style="font-size: 18px; color: var(--text);">${item.name}</strong>
+                        ${badge}
+                        ${tagsHtml}
+                        <div class="card-note-content">${item.content || ''}</div>
+                        <div class="card-actions">
+                            <button class="btn-small edit-btn" onclick="openNoteModal(${data.tIndex}, ${data.iIndex})">✏️ Edit Note</button>
+                            <button class="btn-small danger" onclick="deleteItem(${data.tIndex}, ${data.iIndex})">🗑️</button>
+                        </div>`;
+                } 
+                // RENDER LINK ITEM
+                else {
+                    const ytId = getYoutubeId(item.url || '');
+                    let imgSrc = item.image || (ytId ? `https://img.youtube.com/vi/${ytId}/hqdefault.jpg` : (isImageLink(item.url||'') ? ((item.url||'').match(/^[a-zA-Z]:\\/) ? 'file:///' + item.url.replace(/\\/g, '/') : item.url) : null));
+                    let finalUrl = (item.url||'').match(/^[a-zA-Z]:\\/) ? 'file:///' + item.url.replace(/\\/g, '/') : item.url;
+                    
+                    const viewBtn = (ytId || isImageLink(item.url||'') || isVideoLink(item.url||'') || isAudioLink(item.url||'') || item.image) ? `<button class="btn-small view-btn" onclick="openViewer(${data.tIndex}, ${data.iIndex})">▶️ View</button>` : '';
+                    
+                    card.innerHTML = `
+                        ${imgSrc ? `<img src="${imgSrc}" onerror="this.style.display='none'">` : ''}
+                        <a href="${finalUrl}" target="_blank" class="card-title">${item.name}</a>
+                        ${badge}
+                        ${tagsHtml}
+                        ${item.notes ? `<div class="notes">${item.notes}</div>` : ''}
+                        <div class="card-actions">
+                            ${viewBtn}
+                            <button class="btn-small edit-btn" onclick="openItemModal(${data.tIndex}, ${data.iIndex})">✏️ Edit</button>
+                            <button class="btn-small danger" onclick="deleteItem(${data.tIndex}, ${data.iIndex})">🗑️</button>
+                        </div>`;
+                }
                 itemsContainer.appendChild(card);
             });
         }
 
-        function switchTab(index) {
-            activeTabIndex = index;
-            document.getElementById('searchInput').value = ''; 
-            render();
-        }
-
+        function switchTab(index) { activeTabIndex = index; document.getElementById('searchInput').value = ''; render(); }
         render();
     </script>
 </body>
